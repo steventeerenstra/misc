@@ -1,0 +1,43 @@
+See: https://spsstools.net/en/syntax/syntax-index/labels-variable-names-and-format/create-dummy-variables/
+
+The relevant part is that you create character variables containing the code
+and than write them to a syntax file with WRITE OUTFILE= .../ ../ .. .
+and then run that file with INCLUDE.
+
+DEFINE !DumCode(NomVar	=!CharEnd ('/') 
+		/PreNam	=!CharEnd ('/')
+           	/RefCat 	=!DEFAULT("NONE") !CharEnd ('/')
+		/FPath 	=!CMDEnd)
+
+/* NomVar	Name of nominal variable for which dummy var need to be created	*/
+/* PreNam	Root (or stem) of new dummy variables 					*/
+/* RefCat	No dummy variable is created for the Reference Category		*/
+/*		(Do not use this parameter if there is none)				*/
+/* FPath	Full path and name of data file						*/
+
+GET FILE=!FPath.
+
+*Find all categories.
+AGGREGATE
+  /OUTFILE=*
+  /BREAK=!NomVar
+  /N_BREAK=N.
+
+STRING vname1 TO vname3 (A7).
+COMPUTE catvalue=!NomVar.
+COMPUTE vname1=RTRIM(LTRIM(STRING(catvalue,F8.0))).
+COMPUTE vname2=!QUOTE(!NomVar).
+COMPUTE vname3=CONCAT(!QUOTE(!EVAL(!PreNam)),vname1).
+DO IF catvalue<>!RefCat OR !QUOTE(!RefCat)="NONE".
+WRITE OUTFILE='c:\\temp\\define dum.sps'
+  / 'COMPUTE ' vname3 '=(' vname2 '=' catvalue ').'
+  / 'VALUE LABELS ' vname3 ' 0 "no" 1 "yes".'.
+
+END IF.
+EXECUTE.
+
+GET FILE=!FPath.
+INCLUDE 'C:\\temp\\define dum.sps'.
+EXECUTE.
+
+!ENDDEFINE.
